@@ -200,6 +200,10 @@ namespace ClipDataEx
         /// </summary>
         Pong = 3,
         /// <summary>
+        /// Clipboard data contains a simple UTF-8 text line.
+        /// </summary>
+        Chat = 4,
+        /// <summary>
         /// Message type is not known
         /// </summary>
         Unknown = byte.MaxValue

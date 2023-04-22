@@ -47,6 +47,7 @@
             DeleteToolStripMenuItem = new ToolStripMenuItem();
             BtnAbort = new Button();
             SFD = new SaveFileDialog();
+            BtnChat = new Button();
             CMS.SuspendLayout();
             SuspendLayout();
             // 
@@ -93,7 +94,7 @@
             BtnNewId.Name = "BtnNewId";
             BtnNewId.Size = new Size(75, 23);
             BtnNewId.TabIndex = 2;
-            BtnNewId.Text = "New";
+            BtnNewId.Text = "&New";
             BtnNewId.UseVisualStyleBackColor = true;
             BtnNewId.Click += BtnNewId_Click;
             // 
@@ -104,7 +105,7 @@
             BtnSetPassword.Name = "BtnSetPassword";
             BtnSetPassword.Size = new Size(75, 23);
             BtnSetPassword.TabIndex = 5;
-            BtnSetPassword.Text = "Set";
+            BtnSetPassword.Text = "&Set";
             BtnSetPassword.UseVisualStyleBackColor = true;
             BtnSetPassword.Click += BtnSetPassword_Click;
             // 
@@ -114,8 +115,8 @@
             BtnSendFile.Location = new Point(456, 70);
             BtnSendFile.Name = "BtnSendFile";
             BtnSendFile.Size = new Size(75, 23);
-            BtnSendFile.TabIndex = 6;
-            BtnSendFile.Text = "Send File";
+            BtnSendFile.TabIndex = 7;
+            BtnSendFile.Text = "Send &File";
             BtnSendFile.UseVisualStyleBackColor = true;
             BtnSendFile.Click += BtnSendFile_Click;
             // 
@@ -133,7 +134,7 @@
             LvFiles.Location = new Point(12, 99);
             LvFiles.Name = "LvFiles";
             LvFiles.Size = new Size(599, 330);
-            LvFiles.TabIndex = 8;
+            LvFiles.TabIndex = 9;
             LvFiles.UseCompatibleStateImageBehavior = false;
             LvFiles.View = View.Details;
             LvFiles.DoubleClick += LvFiles_DoubleClick;
@@ -185,8 +186,8 @@
             BtnAbort.Location = new Point(537, 70);
             BtnAbort.Name = "BtnAbort";
             BtnAbort.Size = new Size(75, 23);
-            BtnAbort.TabIndex = 7;
-            BtnAbort.Text = "Abort";
+            BtnAbort.TabIndex = 8;
+            BtnAbort.Text = "&Abort";
             BtnAbort.UseVisualStyleBackColor = true;
             BtnAbort.Click += BtnAbort_Click;
             // 
@@ -194,11 +195,22 @@
             // 
             SFD.Title = "Save File";
             // 
+            // BtnChat
+            // 
+            BtnChat.Location = new Point(375, 70);
+            BtnChat.Name = "BtnChat";
+            BtnChat.Size = new Size(75, 23);
+            BtnChat.TabIndex = 6;
+            BtnChat.Text = "&Open Chat";
+            BtnChat.UseVisualStyleBackColor = true;
+            BtnChat.Click += BtnChat_Click;
+            // 
             // FrmMain
             // 
             AutoScaleDimensions = new SizeF(6F, 13F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(624, 441);
+            Controls.Add(BtnChat);
             Controls.Add(BtnAbort);
             Controls.Add(LvFiles);
             Controls.Add(BtnSendFile);
@@ -236,5 +248,6 @@
         private ToolStripMenuItem DeleteToolStripMenuItem;
         private Button BtnAbort;
         private SaveFileDialog SFD;
+        private Button BtnChat;
     }
 }

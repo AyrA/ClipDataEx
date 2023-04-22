@@ -7,11 +7,11 @@ namespace ClipDataEx
 {
     public class ClipboardDataHandler : IDisposable, IMessageFilter
     {
-        public delegate void ClipboardDataEventHandler(object sender, ClipboardProtocolMessage data);
-        public delegate void SendFileCompleteHandler(object sender, ClipboardProtocolMessage lastAck);
+        public delegate void ClipboardProtocolMessageHandler(object sender, ClipboardProtocolMessage data);
 
-        public event ClipboardDataEventHandler ClipboardData = delegate { };
-        public event SendFileCompleteHandler SendFileComplete = delegate { };
+        public event ClipboardProtocolMessageHandler ClipboardData = delegate { };
+        public event ClipboardProtocolMessageHandler SendFileComplete = delegate { };
+        public event ClipboardProtocolMessageHandler ChatMessage = delegate { };
 
         [DllImport("User32.dll")]
         private static extern bool AddClipboardFormatListener(IntPtr hWnd);
@@ -113,6 +113,30 @@ namespace ClipDataEx
             };
             pendingData = data.Skip(ChunkSize).ToArray();
             SendData(lastData.Serialize());
+        }
+
+        public void SendChatMessage(string text)
+        {
+            if (Busy)
+            {
+                throw new InvalidOperationException("Client is busy sending a file");
+            }
+            if (string.IsNullOrEmpty(text))
+            {
+                throw new ArgumentException($"'{nameof(text)}' cannot be null or empty", nameof(text));
+            }
+            if (text.Length > 1000 || Encoding.UTF8.GetByteCount(text) > 1000)
+            {
+                throw new ArgumentOutOfRangeException(nameof(text), $"Message cannot be longer than 1000 bytes");
+            }
+            var bytes = Encoding.UTF8.GetBytes(text);
+            var msg = new ClipboardProtocolMessage
+            {
+                MessageType = MessageType.Chat,
+                Data = bytes,
+                SenderId = Id
+            };
+            SendData(msg.Serialize());
         }
 
         private ClipboardProtocolMessage? CheckClipboard()
@@ -368,6 +392,10 @@ namespace ClipDataEx
                                     Pong(result);
                                     break;
                                 case MessageType.Pong:
+                                    //NOOP
+                                    break;
+                                case MessageType.Chat:
+                                    ChatMessage(this, result);
                                     break;
                                 default:
                                     throw new NotImplementedException($"Unknown type: {result.MessageType}");

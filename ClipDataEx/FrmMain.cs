@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 
 namespace ClipDataEx
 {
@@ -18,6 +19,24 @@ namespace ClipDataEx
 #endif
             handler.ClipboardData += Handler_ClipboardData;
             handler.SendFileComplete += Handler_SendFileComplete;
+            handler.ChatMessage += Handler_ChatMessage;
+        }
+
+        private void Handler_ChatMessage(object sender, ClipboardProtocolMessage data)
+        {
+            if (data?.Data == null)
+            {
+                Debug.Print("Got ChatMessage event but data is null");
+                return;
+            }
+            if (data.Data.Length > 1000)
+            {
+                Debug.Print("Got ChatMessage event but data is invalid (too long, is {0})", data.Data.Length);
+                return;
+            }
+            var message = Encoding.UTF8.GetString(data.Data);
+            SetChatMessage(data.SenderId, message);
+            //NOOP
         }
 
         private void Handler_SendFileComplete(object sender, ClipboardProtocolMessage lastAck)
@@ -42,6 +61,38 @@ namespace ClipDataEx
             {
                 Debug.Print("File name: {0}", data.FileName);
             }
+        }
+
+        private void SetChatMessage(uint senderId, string message)
+        {
+            var f = OpenChat();
+            f.AddMessage(senderId, message);
+        }
+
+        private FrmChat OpenChat()
+        {
+            var f = Application.OpenForms.OfType<FrmChat>().FirstOrDefault();
+            if (f == null)
+            {
+                f = new FrmChat();
+                f.SendMessage += delegate (object sender, string message)
+                {
+                    try
+                    {
+                        handler.SendChatMessage(message);
+                        //Add message to chat after it has been sent
+                        SetChatMessage(handler.Id, message);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.Message, "Unable to send your message", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        //Add the message back to the edit box on error
+                        f.SetEditMessage(message);
+                    }
+                };
+            }
+            f.Show();
+            return f;
         }
 
         private void RenderList()
@@ -233,6 +284,11 @@ namespace ClipDataEx
                 e.SuppressKeyPress = e.Handled = true;
                 DeleteSelectedItems();
             }
+        }
+
+        private void BtnChat_Click(object sender, EventArgs e)
+        {
+            OpenChat();
         }
 
         #endregion
