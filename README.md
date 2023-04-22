@@ -1,10 +1,23 @@
 # ClipDataEx
 
-ClipDataEx is a tool to exfiltrate data via clipboard.
+ClipDataEx is a tool to exfiltrate data via the clipboard
+on systems where regular file transfer is disabled.
 
 It serves as a proof of concept, but is fully functional.
 It may lack a few non-essential features
-like a progress indicator on the sender side.
+like a progress indicator on the sender side, and mesh network support.
+
+## CAUTION!
+
+**As mentioned above, this is a proof of concept.**
+
+The application may not properly check inbound data for protocol conformation,
+as such, do not use this application if you have potentially untrusted peers.
+
+Being written in C# it should be safe
+from most attacks that plague unmanaged languages.
+
+In general, it's assumed that you control all clients that participate.
 
 ## Short Description
 
@@ -19,6 +32,12 @@ provided clipboard sharing is enabled.
 Data is protected using encryption and integrity functions
 to prevent people from peeking at the data or modifying it.
 
+Note that ClipDataEx uses image data to transfer files.
+You could use strings instead,
+but be aware that you have to come up with a completely different encoding scheme,
+mostly because string data cannot contain nullbytes.
+You can use Base64 but this will increase data size a lot.
+
 ## Detailed Description
 
 ClipDataEx sends files by encoding them inside of the pixel data of images.
@@ -31,16 +50,22 @@ and made up of white noise.
 
 ### How Files are Transferred
 
-The file is split up into chunks of data.
+A file is split up into chunks of data.
 ClipDataEx has a hardcoded size of approximately 1 MB
 to accomodate progress reporting on slow connections.
-The theoretical limit per chunk is `0xFFFFFF` (16777215) bytes.
+The theoretical limit per chunk is `0xFFFFFF` (16'777'215) bytes.
 This would result in an image of approximately 2365x2365 pixels.
 With 1 MB, the images are 592x592 pixels, which is a more reasonable size.
 
 Note: Within the permitted size limits, chunks can be of any size.
 ClipDataEx doesn't has this feature built-in,
 but a user might decide to randomize the chunk size for every sent chunk.
+The way the protocol is designed doesn't requires any prior communication.
+The chunk size may be decided as late as when the chunk is ready to be sent.
+
+Note: ClipDataEx can easily be modified to do this
+because it doesn't prepares protocol messages until the moment they're needed.
+Unsent data is simply kept in a byte array.
 
 Note: Due to a limit of the underlying image type,
 the width of a ClipDataEx image will always be a multiple of 4 pixels.
@@ -58,10 +83,14 @@ Quick overview of how data is encoded
 7. Encode the prefixed data into an image
 8. Save the image into the clipboard
 
-### Control Messages
+## Control Messages
 
-Control messages are encoded in an identical fashion,
-except that they lack data (step 1)
+Messages can be sent that do not contain file data,
+among other things, this includes chat messages
+as well as acknowledging file parts that were received.
+
+Control messages are encoded in an identical fashion to data messages,
+except that they lack data (step 1 from "data encoding")
 and instead are a mostly empty clipboard exchange structure.
 
 ## Data structure
@@ -89,7 +118,9 @@ which will be ignored by the client however.
 This data can be used to pad the messages
 and obfuscate whether an image is data or a control message.
 Doing that slows down the transfer process however.
-Being just a proof of concept, ClipDataEx doesn't implements this.
+
+Being just a proof of concept, ClipDataEx doesn't creates padding,
+but can handle padded messages it receives.
 
 ### Message Type
 
@@ -210,7 +241,45 @@ This is a useful time saver
 because images are sometimes encoded multiple times in the clipboard.
 A duplicate id thus indicates a duplicate packet.
 
-### Acknowledging Transfers
+## Example data structure
+
+*Line breaks are used to split long lines.*
+*They're not present in the source data*
+
+Example file data (first segment):
+
+    <16-bytes><nonce><tag><encrypted>
+
+Segment after being decrypted:
+
+    <clipboard-exchange-structure>
+
+Contents of the structure:
+
+    <type:0x00><header1:FileName><header2:FileSize><header3:SenderId>
+	<header4:SequenceNumber><header5:FileId><zero><data-length><data>
+
+Contents of header1:
+
+	<type:0x02><length:8><data:Test.txt>
+
+Contents of header2:
+
+	<type:0x03><length:8><data:123456>
+
+Contents of header3:
+
+	<type:0x05><length:4><data:1222773457>
+
+Contents of header4:
+
+	<type:0x04><length:4><data:0>
+
+Contents of header5:
+
+	<type:0x01><length:16><data:5526F5A9-9FD3-41C8-9691-EE13B0D927B5>
+
+## Acknowledging Transfers
 
 If a client successfully decoded a packet,
 he immediately acknowledges the transfer.
