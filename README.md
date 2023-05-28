@@ -132,11 +132,11 @@ The following message types are defined:
 - `0x03` Response to a 0x02 message
 - `0x04` Text message
 
-Except for 0x01 and 0x04, the data portion of the message will be ignored.
+Except for 0x00 and 0x04, the data portion of the message will be ignored.
 
 #### Data format
 
-- For type 0x01, the data is the raw data of the file segment.
+- For type 0x00, the data is the raw data of the file segment.
 - For type 0x04, the data is an UTF-8 encoded string of at most 1000 bytes.
 
 ### Clipboard Exchange Structure Header
@@ -149,10 +149,14 @@ A header has this format:
 | Size  | 2    | Length of following data. Can be zero |
 | Data  | *    | As many bytes as "Length" specifies   |
 
-A clipboard exange structure has no limit on the number of headers.
-Identical header types can appear multiple times too,
-however, there is currently no header type that would mandate this feature.
-Duplicate header types in ClipDataEx simply overwrite previous occurences.
+A clipboard exange structure has no limit on the number of headers,
+but reasonably speaking, a client should abort after 10+ headers.
+Messages that would need this many headers should instead use the data portion.
+
+Identical header types can appear multiple times,
+there is currently no header type that would mandate this feature however.
+
+As of now, duplicate header types in ClipDataEx simply overwrite previous occurences.
 
 Headers can appear in any order.
 
@@ -182,21 +186,21 @@ This is the "Zero" field mentioned in the clipboard exchange structure.
 This is an id that is unique to every file but identical across file segments.
 This is used in the receiving end to associate segments with the correct file.
 
-**This field is mandatory in every 0x01 file segment message**
+**This field is mandatory in every 0x00 and 0x01 message**
 
 #### File Name
 
 This is the file name of the file. It should not contain path information.
 The name is to be encoded as UTF-8.
 
-**This field is mandatory in the first 0x01 segment and ignored in subsequent segments**
+**This field is mandatory in the first 0x00 segment and ignored in subsequent segments**
 
 #### File Size
 
 Size of the file in bytes.
 This is used by the recipient to detect when a file has been completely received.
 
-**This field is mandatory in the first 0x01 segment and ignored in subsequent segments**
+**This field is mandatory in the first 0x00 segment and ignored in subsequent segments**
 
 #### Sequence Number
 
@@ -206,7 +210,7 @@ and increases for every file part that is sent.
 It's used by the recipient to put the data into the correct order
 and to ignore duplicate segments.
 
-**This field is mandatory in the first 0x01 segment and ignored in subsequent segments**
+**This field is mandatory in every 0x00 and 0x01 message**
 
 #### Sender Id
 
@@ -229,7 +233,14 @@ The encrypted data is simply the concatenation of nonce, tag, ciphertext.
 The values are not prefixed, but the sizes are known
 because ClipDataEx picks the largest valid nonce and tag sizes.
 
-Note: The order must not be changed or decryption fails.
+Note: The order of these 3 fields must not be changed or decryption fails.
+
+ClipDataEx currently implements password based key by feeding the key through SHA256.
+As a proof of concept this is not a problem because the hash is never transmitted,
+but if you intend on using this file transfer method,
+consider using a key derivation function like PBKDF2 for this instead.
+
+This of course makes a new data packet necessary to exchange the nonce.
 
 ### Raw Data
 
@@ -238,15 +249,16 @@ The raw data is the encrypted data prefixed with 16 randomly chosen bytes.
 There's no meaning in those bytes,
 but the recipient can use them to avoid processing the data twice.
 This is a useful time saver
-because images are sometimes encoded multiple times in the clipboard.
+because images are sometimes encoded multiple times in the clipboard
+to accomodate different formats.
 A duplicate id thus indicates a duplicate packet.
 
 ## Example data structure
 
-*Line breaks are used to split long lines.*
+*Line breaks are used to split long lines in this document.*
 *They're not present in the source data*
 
-Example file data (first segment):
+Example file data for the first segment of a file transfer:
 
     <16-bytes><nonce><tag><encrypted>
 
@@ -259,23 +271,23 @@ Contents of the structure:
     <type:0x00><header1:FileName><header2:FileSize><header3:SenderId>
 	<header4:SequenceNumber><header5:FileId><zero><data-length><data>
 
-Contents of header1:
+Contents of header1 (file name):
 
 	<type:0x02><length:8><data:Test.txt>
 
-Contents of header2:
+Contents of header2 (file size):
 
 	<type:0x03><length:8><data:123456>
 
-Contents of header3:
+Contents of header3 (client id):
 
 	<type:0x05><length:4><data:1222773457>
 
-Contents of header4:
+Contents of header4 (sequence number):
 
 	<type:0x04><length:4><data:0>
 
-Contents of header5:
+Contents of header5 (file id):
 
 	<type:0x01><length:16><data:5526F5A9-9FD3-41C8-9691-EE13B0D927B5>
 
